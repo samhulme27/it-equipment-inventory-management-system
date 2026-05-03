@@ -52,3 +52,25 @@ def add_new_device(device_name, device_type, user, location, date, notes, status
     #get the data from the new row, merge the new row with the df
     save_data(df)
 
+def retire_device(device_name):
+    df = load_data()
+
+    df[df[COL_DEVICE_NAME] != device_name]
+
+    save_data(df)
+
+
+def edit_device(device_name, column, new_value):
+    
+    df = load_data()
+    #load the df
+
+    df[COL_DEVICE_NAME] == device_name
+
+    #find the correct device name and row
+
+    df.loc[filter, column] = new_value
+
+    #loc - select specific rows and columns, change the value 
+    
+    save_data() 
