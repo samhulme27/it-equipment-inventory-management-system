@@ -14,6 +14,14 @@ COL_STATUS = "Status"
 # Mapping for the excel file and excel table colums, will need to change later when I've made the proper excel document 
 
 
-df = pd.read_excel("inventory.xlsx") 
-# load excel file into a table in python and call it df
-print(df)
+def load_data():
+    return pd.read_excel(EXL_FILE)
+
+
+# Function to get the excel file, which loads into a table in python, now mapped to EXL_FILE
+
+
+def save_data(df):
+    df.to_excel(EXL_FILE, index=False)
+
+# Function save data, takes updated python table data and writes it back into excel
