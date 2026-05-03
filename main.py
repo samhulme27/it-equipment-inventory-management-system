@@ -23,6 +23,15 @@ def load_data():
 
 
 def save_data(df):
+    df = df.reindex(columns=[
+        COL_DEVICE_NAME,
+        COL_DEVICE_TYPE,
+        COL_USER,
+        COL_LOCATION,
+        COL_DATE,
+        COL_NOTES,
+        COL_STATUS
+    ])
     df.to_excel(EXL_FILE, index=False)
 
 # Function save data, takes updated python table data and writes it back into excel
@@ -74,3 +83,15 @@ def edit_device(device_name, column, new_value):
     #loc - select specific rows and columns, change the value 
     
     save_data() 
+
+
+
+add_new_device(
+    "PC023",
+    "desktop",
+    "Sam",
+    "IT",
+    "date",
+    "test",
+    "active"
+)
