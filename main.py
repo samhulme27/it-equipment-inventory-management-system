@@ -65,9 +65,9 @@ def edit_device(device_name, column, new_value):
     df = load_data()
     #load the df
 
-    df[COL_DEVICE_NAME] == device_name
+    filter = df[COL_DEVICE_NAME] == device_name
 
-    #find the correct device name and row
+    #find the correct device name and row(create the filter)
 
     df.loc[filter, column] = new_value
 
