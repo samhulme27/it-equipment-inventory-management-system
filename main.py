@@ -4,6 +4,7 @@ import datetime
 # excel file
 EXL_FILE = "inventory.xlsx"
 
+COL_ASSET_TAG = "Asset Tag"
 COL_DEVICE_NAME = "Device Name"
 COL_DEVICE_TYPE = "Device Type"
 COL_SERIAL_NUMBER = "Serial Number"
@@ -16,6 +17,19 @@ COL_STATUS = "Status"
 
 # Mapping for the excel file and excel table colums, will need to change later when I've made the proper excel document 
 
+VALID_STATUS = ["In Use", "Available", "Retired", "repair"]
+
+
+
+def validate_data(df):
+    if df[COL_ASSET_TAG].duplicated().any():
+        # check for duplicate asset tags, if any are found return false and error message
+        return False, "Duplicate asset tags found"
+    if df[COL_ASSET_TAG].astype(str).str.strip().eq("").any():
+        # check for empty asset tags, if any are found return false and error message
+        return False, "Empty asset tags found"
+    return
+
 
 def load_data():
     return pd.read_excel(EXL_FILE)
@@ -25,7 +39,14 @@ def load_data():
 
 
 def save_data(df):
+    valid, message = validate_data(df)
+
+    if not valid:
+        print(f"Data validation failed: {message}")
+        return
+
     df = df.reindex(columns=[
+        COL_ASSET_TAG,
         COL_DEVICE_NAME,
         COL_DEVICE_TYPE,
         COL_SERIAL_NUMBER,
@@ -36,12 +57,15 @@ def save_data(df):
         COL_NOTES,
         COL_STATUS
     ])
+
     df.to_excel(EXL_FILE, index=False)
+    print("Data saved successfully.")
 
-# Function save data, takes updated python table data and writes it back into excel
+# Function save data, validates data and takes updated python table data and writes it back into excel
 
 
-def add_new_device(device_name, device_type, serial_number, model_number, user, location, date, notes, status):
+def add_new_device(asset_tag, device_name, device_type, serial_number, model_number, user, location, date, notes, status):
+
 
     df = load_data()
     #Load the data
@@ -49,6 +73,7 @@ def add_new_device(device_name, device_type, serial_number, model_number, user, 
     # get the date and time now
     
     new_row = {
+        COL_ASSET_TAG: asset_tag,
         COL_DEVICE_NAME: device_name,
         COL_DEVICE_TYPE: device_type,
         COL_SERIAL_NUMBER: serial_number,
@@ -137,5 +162,6 @@ def search_location(location):
         print("The following devices were found for that location:")
         print(result)
         return result
-
+    
 search_device_type("desktop")
+save_data(df=load_data())
