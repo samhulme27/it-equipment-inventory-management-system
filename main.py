@@ -1,11 +1,13 @@
 import pandas as pd 
 import datetime
 
-
+# excel file
 EXL_FILE = "inventory.xlsx"
 
 COL_DEVICE_NAME = "Device Name"
 COL_DEVICE_TYPE = "Device Type"
+COL_SERIAL_NUMBER = "Serial Number"
+COL_MODEL_NUMBER = "Model Number"
 COL_USER = "User"
 COL_LOCATION = "location"
 COL_DATE = "Date"
@@ -26,6 +28,8 @@ def save_data(df):
     df = df.reindex(columns=[
         COL_DEVICE_NAME,
         COL_DEVICE_TYPE,
+        COL_SERIAL_NUMBER,
+        COL_MODEL_NUMBER,
         COL_USER,
         COL_LOCATION,
         COL_DATE,
@@ -37,7 +41,7 @@ def save_data(df):
 # Function save data, takes updated python table data and writes it back into excel
 
 
-def add_new_device(device_name, device_type, user, location, date, notes, status):
+def add_new_device(device_name, device_type, serial_number, model_number, user, location, date, notes, status):
 
     df = load_data()
     #Load the data
@@ -47,6 +51,8 @@ def add_new_device(device_name, device_type, user, location, date, notes, status
     new_row = {
         COL_DEVICE_NAME: device_name,
         COL_DEVICE_TYPE: device_type,
+        COL_SERIAL_NUMBER: serial_number,
+        COL_MODEL_NUMBER: model_number,
         COL_USER: user,
         COL_LOCATION: location,
         COL_DATE: date,
@@ -85,13 +91,51 @@ def edit_device(device_name, column, new_value):
     save_data() 
 
 
+#search function, takes the device name and searches through the excel file for it, then prints the row with the device name, if not found prints no devices found
 
-add_new_device(
-    "PC023",
-    "desktop",
-    "Sam",
-    "IT",
-    "date",
-    "test",
-    "active"
-)
+def search_device_name(device_name):
+    df = load_data()
+
+    result = df[df[COL_DEVICE_NAME].astype(str).str.contains(device_name, case=False, na=False)]
+    if result.empty:
+        print("No devices found with that name.")
+    else:
+        print(result)
+        return result
+
+#serch function, takes the device type and searches through the excel file for it, then prints the row with the device type, if not found prints no devices found
+
+def search_device_type(device_type):
+    df = load_data()
+    result = df[df[COL_DEVICE_TYPE].astype(str).str.contains(device_type, case=False, na=False)]
+    if result.empty:
+        print("No devices found with that type.")
+    else:
+        print("The following devices were found with that type:")
+        print(result)
+        return result
+
+#search function, takes the user and searches through the excel file for it, then prints the row with the user, if not found prints no devices found
+
+def search_user(user):
+    df = load_data()
+    result = df[df[COL_USER].astype(str).str.contains(user, case=False, na=False)]
+    if result.empty:
+        print("No devices found for that user.")
+    else:
+        print("The following devices were found for that user:")
+        print(result)
+        return result
+
+#search function, takes the location and searches through the excel file for it, then prints the row with the location, if not found prints no devices found
+def search_location(location):
+    df = load_data()
+    result = df[df[COL_LOCATION].astype(str).str.contains(location, case=False, na=False)]
+    if result.empty:
+        print("No devices found for that location.")
+    else:
+        print("The following devices were found for that location:")
+        print(result)
+        return result
+
+search_device_type("desktop")
