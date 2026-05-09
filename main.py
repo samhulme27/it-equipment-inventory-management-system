@@ -1,7 +1,8 @@
 import pandas as pd 
 import datetime
+from system_info import get_serial_number, get_mac_address, get_device_name, get_device_type, get_model_number, get_user, generate_device_info, get_date, generate_next_asset_tag, generate_asset_tag
 
-# excel file
+# excel fileS
 EXL_FILE = "inventory.xlsx"
 
 COL_ASSET_TAG = "Asset Tag"
@@ -9,6 +10,7 @@ COL_DEVICE_NAME = "Device Name"
 COL_DEVICE_TYPE = "Device Type"
 COL_SERIAL_NUMBER = "Serial Number"
 COL_MODEL_NUMBER = "Model Number"
+COL_MAC_ADDRESS = "MAC Address"
 COL_USER = "User"
 COL_LOCATION = "location"
 COL_DATE = "Date"
@@ -28,7 +30,11 @@ def validate_data(df):
     if df[COL_ASSET_TAG].astype(str).str.strip().eq("").any():
         # check for empty asset tags, if any are found return false and error message
         return False, "Empty asset tags found"
-    return
+    
+    if df[COL_DEVICE_NAME].duplicated().any():
+        # check for duplicate device names, if any are found return false and error message
+        return False, "Duplicate device names found"
+    return True, "Data is valid"
 
 
 def load_data():
@@ -51,6 +57,7 @@ def save_data(df):
         COL_DEVICE_TYPE,
         COL_SERIAL_NUMBER,
         COL_MODEL_NUMBER,
+        COL_MAC_ADDRESS,
         COL_USER,
         COL_LOCATION,
         COL_DATE,
@@ -64,33 +71,20 @@ def save_data(df):
 # Function save data, validates data and takes updated python table data and writes it back into excel
 
 
-def add_new_device(asset_tag, device_name, device_type, serial_number, model_number, user, location, date, notes, status):
-
+def add_new_device(device_dict):
 
     df = load_data()
-    #Load the data
-    date = datetime.datetime.now()
-    # get the date and time now
-    
-    new_row = {
-        COL_ASSET_TAG: asset_tag,
-        COL_DEVICE_NAME: device_name,
-        COL_DEVICE_TYPE: device_type,
-        COL_SERIAL_NUMBER: serial_number,
-        COL_MODEL_NUMBER: model_number,
-        COL_USER: user,
-        COL_LOCATION: location,
-        COL_DATE: date,
-        COL_NOTES: notes,
-        COL_STATUS: status
 
-        }
+    # ensure date is set here OR earlier in pipeline
+    if COL_DATE not in device_dict:
+        device_dict[COL_DATE] = datetime.datetime.now()
 
-    new_df = pd.DataFrame([new_row])
+    new_df = pd.DataFrame([device_dict])
+
     df = pd.concat([df, new_df], ignore_index=True)
 
-    #get the data from the new row, merge the new row with the df
     save_data(df)
+
 
 def retire_device(device_name):
     df = load_data()
@@ -128,7 +122,7 @@ def search_device_name(device_name):
         print(result)
         return result
 
-#serch function, takes the device type and searches through the excel file for it, then prints the row with the device type, if not found prints no devices found
+#search function, takes the device type and searches through the excel file for it, then prints the row with the device type, if not found prints no devices found
 
 def search_device_type(device_type):
     df = load_data()
@@ -162,6 +156,22 @@ def search_location(location):
         print("The following devices were found for that location:")
         print(result)
         return result
-    
-search_device_type("desktop")
-save_data(df=load_data())
+
+
+def run():
+    device = generate_device_info(
+        asset_tag=generate_next_asset_tag(EXL_FILE),
+        device_name=get_device_name(),
+        device_type=get_device_type(),
+        serial_number=get_serial_number(),
+        model_number=get_model_number(),
+        mac_address=get_mac_address(),
+        user=get_user(),
+        location="Unknown",
+        date=get_date(),
+        notes="No notes",
+        status="Active"
+    )
+    add_new_device(device)
+
+run()
