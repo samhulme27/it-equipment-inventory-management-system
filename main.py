@@ -31,10 +31,12 @@ def validate_data(df):
         # check for empty asset tags, if any are found return false and error message
         return False, "Empty asset tags found"
     
-    if df[COL_DEVICE_NAME].duplicated().any():
-        # check for duplicate device names, if any are found return false and error message
-        return False, "Duplicate device names found"
     return True, "Data is valid"
+
+def device_exists(serial_number):
+    df = load_data()
+    serials = df[COL_SERIAL_NUMBER].astype(str)
+    return serial_number in serials.values
 
 
 def load_data():
@@ -94,14 +96,14 @@ def retire_device(device_name):
     save_data(df)
 
 
-def edit_device(device_name, column, new_value):
+def edit_device(serial_number, column, new_value):
     
     df = load_data()
     #load the df
 
-    filter = df[COL_DEVICE_NAME] == device_name
+    filter = df[COL_SERIAL_NUMBER].astype(str) == str(serial_number)
 
-    #find the correct device name and row(create the filter)
+    #find the correct device serial and row(create the filter)
 
     df.loc[filter, column] = new_value
 
@@ -156,7 +158,26 @@ def search_location(location):
         print("The following devices were found for that location:")
         print(result)
         return result
+    
 
+def update_existing_device(device_dict):
+    df = load_data()
+
+    serial = str(device_dict[COL_SERIAL_NUMBER])
+
+    mask = df[COL_SERIAL_NUMBER].astype(str) == serial
+
+    auto_updated_fields = [
+        COL_DEVICE_NAME, 
+        COL_DEVICE_TYPE, 
+        COL_MODEL_NUMBER, 
+        COL_MAC_ADDRESS,
+        COL_USER, 
+        COL_DATE]
+    
+    for field in auto_updated_fields:
+        df.loc[mask, field] = device_dict[field]
+    save_data(df)
 
 def run():
     device = generate_device_info(
@@ -172,6 +193,17 @@ def run():
         notes="No notes",
         status="Active"
     )
-    add_new_device(device)
+
+    valid, message = validate_data(device)
+    if not valid:
+        print(f"Device data validation failed: {message}")
+        return
+
+    if device_exists(device[COL_SERIAL_NUMBER]):
+        update_existing_device(device)
+        print("Device with this serial number already exists. Cannot add duplicate.")
+    else:
+        add_new_device(device)
+        print("Device added successfully.")
 
 run()

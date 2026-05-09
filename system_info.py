@@ -89,17 +89,18 @@ def generate_next_asset_tag(file_path):
     df = pd.read_excel(file_path)
 
     tags = df[COL_ASSET_TAG].dropna().astype(str)
+    
+    numbers = []
 
-    if tags.empty:
-        next_number = 1
-    else:
-        last_asset_tag = tags.iloc[-1]
+    for tag in tags:
 
-        try:
-            last_number = int(last_asset_tag.split("-")[1])
-        except (IndexError, ValueError):
-            last_number = 0
+        parts = tag.split("-")
 
-        next_number = last_number + 1
+        if len(parts) != 2:
+            continue
+        if not parts[1].isdigit():
+            continue
+        numbers.append(int(parts[1]))
+    next_number = max(numbers, default=0) + 1
 
     return generate_asset_tag("ASSET", next_number)
