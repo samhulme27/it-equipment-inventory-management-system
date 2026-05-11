@@ -23,15 +23,20 @@ VALID_STATUS = ["In Use", "Available", "Retired", "repair"]
 
 
 
-def validate_data(df):
-    if df[COL_ASSET_TAG].duplicated().any():
-        # check for duplicate asset tags, if any are found return false and error message
-        return False, "Duplicate asset tags found"
-    if df[COL_ASSET_TAG].astype(str).str.strip().eq("").any():
-        # check for empty asset tags, if any are found return false and error message
-        return False, "Empty asset tags found"
-    
-    return True, "Data is valid"
+def validate_data(device):
+
+    asset_tag = str(device.get(COL_ASSET_TAG, "")).strip()
+    serial = str(device.get(COL_SERIAL_NUMBER, "")).strip()
+
+    if not asset_tag:
+        return False, "Empty asset tag"
+
+    if not serial:
+        return False, "Empty serial number"
+
+    return True, "Valid"
+
+
 
 def device_exists(serial_number):
     df = load_data()
@@ -86,6 +91,20 @@ def add_new_device(device_dict):
     df = pd.concat([df, new_df], ignore_index=True)
 
     save_data(df)
+
+
+def manually_add_device():
+
+    device_dict = {
+        COL_DEVICE_NAME: input("Enter device name: "),
+        COL_DEVICE_TYPE: input("Enter device type: "), 
+        COL_SERIAL_NUMBER: input("Enter serial number: "),
+        COL_MODEL_NUMBER: input("Enter model number: "),
+        COL_LOCATION: input("Enter location: "),
+        COL_USER: input("Enter user: "),
+        COL_NOTES: input("Enter any notes: "),
+        COL_STATUS: input("Enter status (In Use, Available, Retired, Repair): ")
+    }
 
 
 def retire_device(device_name):
@@ -205,5 +224,3 @@ def run():
     else:
         add_new_device(device)
         print("Device added successfully.")
-
-run()
