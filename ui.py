@@ -46,16 +46,15 @@ def scan_device():
         messagebox.showerror("Error", str(e))
 
 
-
-
 def view_inventory():
 
     inventory_window = tk.Toplevel(root)
     inventory_window.title("Inventory")
     inventory_window.geometry("1600x800")
+    inventory_window.configure(bg="#f5f5f5")
 
-    frame = tk.Frame(inventory_window)
-    frame.pack(fill=tk.BOTH, expand=True)
+    frame = tk.Frame(inventory_window, bg="#f5f5f5")
+    frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
     # ----------------------------
     # SEARCH BAR
@@ -63,115 +62,180 @@ def view_inventory():
     search_var = tk.StringVar()
 
     search_entry = tk.Entry(frame, textvariable=search_var)
-    search_entry.pack(fill="x", padx=5, pady=5)
-    search_entry.insert(0, "Search...")
+    search_entry.pack(fill="x", pady=5)
+    search_entry.insert(0, "Search devices...")
 
+    # ----------------------------
+    # TREE + SCROLLBAR
+    # ----------------------------
     scrollbar = tk.Scrollbar(frame)
     scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
     tree = ttk.Treeview(frame, yscrollcommand=scrollbar.set, selectmode="browse")
     scrollbar.config(command=tree.yview)
 
-    try:
-        df = load_data()
+    df = load_data()
 
-        if df.empty:
-            messagebox.showinfo("Inventory", "No devices found")
+    if df.empty:
+        messagebox.showinfo("Inventory", "No devices found")
+        return
+
+    df.columns = df.columns.str.strip()
+
+    tree["columns"] = list(df.columns)
+    tree.column("#0", width=0, stretch=False)
+
+    for col in df.columns:
+        tree.column(col, anchor="w", width=170, stretch=True)
+        tree.heading(col, text=col, anchor="w")
+
+    # ----------------------------
+    # LOAD TABLE
+    # ----------------------------
+    def load_table(dataframe):
+        tree.delete(*tree.get_children())
+        for _, row in dataframe.iterrows():
+            tree.insert("", "end", values=list(row))
+
+    load_table(df)
+
+    # ----------------------------
+    # SEARCH
+    # ----------------------------
+    def update_search(*args):
+        query = search_var.get().lower().strip()
+
+        if not query or query == "search devices...":
+            load_table(df)
             return
 
-        df.columns = df.columns.str.strip()
+        filtered = df[df.apply(
+            lambda row: row.astype(str).str.lower().str.contains(query).any(),
+            axis=1
+        )]
 
-        tree["columns"] = list(df.columns)
-        tree.column("#0", width=0, stretch=False)
+        load_table(filtered)
 
-        for col in df.columns:
-            tree.column(col, anchor="w", width=160)
-            tree.heading(col, text=col)
+    search_var.trace_add("write", update_search)
 
-        # ----------------------------
-        # LOAD DATA FUNCTION
-        # ----------------------------
-        def load_table(dataframe):
-            tree.delete(*tree.get_children())
+    # ----------------------------
+    # VIEW SELECTED
+    # ----------------------------
+    def view_selected():
 
-            for _, row in dataframe.iterrows():
-                tree.insert("", "end", values=[row[col] for col in dataframe.columns])
+        selected = tree.selection()
+        if not selected:
+            return
 
-        load_table(df)
+        item = tree.item(selected[0])
+        values = item["values"]
 
-        # ----------------------------
-        # SEARCH FUNCTION
-        # ----------------------------
-        def update_search(*args):
-            query = search_var.get().lower().strip()
+        view_window = tk.Toplevel(inventory_window)
+        view_window.title("Device Details")
+        view_window.geometry("400x400")
 
-            if not query or query == "search...":
-                load_table(df)
-                return
+        for i, col in enumerate(df.columns):
+            tk.Label(
+                view_window,
+                text=f"{col}: {values[i]}",
+                anchor="w"
+            ).pack(fill="x", padx=10, pady=2)
 
-            filtered = df[df.apply(
-                lambda row: row.astype(str).str.lower().str.contains(query).any(),
-                axis=1
-            )]
+    # ----------------------------
+    # EDIT SELECTED
+    # ----------------------------
+    def edit_selected():
 
-            load_table(filtered)
+        selected = tree.selection()
+        if not selected:
+            return
 
-        search_var.trace_add("write", update_search)
+        item = tree.item(selected[0])
+        values = item["values"]
 
-        # ----------------------------
-        # EDIT FUNCTION
-        # ----------------------------
-        def on_row_double_click(event):
-            selected = tree.selection()
-            if not selected:
-                return
+        edit_window = tk.Toplevel(inventory_window)
+        edit_window.title("Edit Device")
+        edit_window.geometry("400x500")
 
-            item = tree.item(selected[0])
-            values = item["values"]
+        entries = {}
 
-            edit_window = tk.Toplevel(inventory_window)
-            edit_window.title("Edit Device")
-            edit_window.geometry("400x500")
+        for i, col in enumerate(df.columns):
+            tk.Label(edit_window, text=col).pack()
 
-            entries = {}
+            entry = tk.Entry(edit_window)
+            entry.insert(0, values[i])
+            entry.pack()
 
-            for i, col in enumerate(df.columns):
-                tk.Label(edit_window, text=col).pack()
+            entries[col] = entry
 
-                entry = tk.Entry(edit_window)
-                entry.insert(0, values[i])
-                entry.pack()
+        def save_changes():
 
-                entries[col] = entry
+            key_col = df.columns[0]
+            key_value = values[0]
 
-            def save_changes():
-                nonlocal df
+            idx = df.index[df[key_col] == key_value]
 
-                updated = {col: entries[col].get() for col in df.columns}
+            if len(idx) > 0:
+                for col in df.columns:
+                    df.at[idx[0], col] = entries[col].get()
 
-                # find row by first column (assumed unique like asset tag or serial)
-                key_col = df.columns[0]
-                key_value = values[0]
+                save_data(df)
 
-                idx = df.index[df[key_col] == key_value]
+            edit_window.destroy()
+            load_table(df)
 
-                if len(idx) > 0:
-                    for col in df.columns:
-                        df.at[idx[0], col] = updated[col]
+        tk.Button(edit_window, text="Save", command=save_changes).pack(pady=10)
 
-                    save_data(df)
+    # ----------------------------
+    # DELETE SELECTED
+    # ----------------------------
+    def delete_selected():
 
-                edit_window.destroy()
-                load_table(df)
+        selected = tree.selection()
+        if not selected:
+            messagebox.showwarning("Delete", "Select a device first.")
+            return
 
-            tk.Button(edit_window, text="Save", command=save_changes).pack(pady=10)
+        item = tree.item(selected[0])
+        values = item["values"]
 
-        tree.bind("<Double-1>", on_row_double_click)
+        confirm = messagebox.askyesno(
+            "Confirm Delete",
+            "Are you sure you want to delete this device?"
+        )
 
-        tree.pack(fill="both", expand=True)
+        if not confirm:
+            return
 
-    except Exception as e:
-        messagebox.showerror("Error", str(e))
+        key_col = df.columns[0]
+        key_value = values[0]
+
+        updated_df = df[df[key_col] != key_value]
+
+        save_data(updated_df)
+        load_table(updated_df)
+
+    # ----------------------------
+    # RIGHT CLICK MENU
+    # ----------------------------
+    menu = tk.Menu(inventory_window, tearoff=0)
+    menu.add_command(label="View", command=view_selected)
+    menu.add_command(label="Edit", command=edit_selected)
+    menu.add_command(label="Delete", command=delete_selected)
+
+    def show_menu(event):
+        try:
+            tree.selection_set(tree.identify_row(event.y))
+            menu.post(event.x_root, event.y_root)
+        finally:
+            menu.grab_release()
+
+    tree.bind("<Button-3>", show_menu)
+
+    # ----------------------------
+    # PACK TREE
+    # ----------------------------
+    tree.pack(fill="both", expand=True)
 
 
 

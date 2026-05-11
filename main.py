@@ -1,5 +1,6 @@
 import pandas as pd 
-import datetime
+import shutil, os
+from datetime import datetime
 from system_info import get_serial_number, get_mac_address, get_device_name, get_device_type, get_model_number, get_user, generate_device_info, get_date, generate_next_asset_tag, generate_asset_tag
 
 # excel fileS
@@ -52,6 +53,8 @@ def load_data():
 
 
 def save_data(df):
+
+    data_backup(EXL_FILE) # backup data before saving, creates a backup folder and saves the old file with a timestamp, prevents data loss from accidental overwrites
 
     # enforce correct column order only
     df = df.reindex(columns=[
@@ -184,6 +187,18 @@ def search_location(location):
         print(result)
         return result
     
+
+def data_backup(file_path):
+    if not os.path.exists(file_path):
+        return
+    back_up_folder = "backups"
+    os.makedirs(back_up_folder, exist_ok=True)
+
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+
+    back_up_file = os.path.join(back_up_folder, f"inventory_backup_{timestamp}.xlsx")
+
+    shutil.copy(file_path, back_up_file)
 
 
 def update_existing_device(device_dict):
