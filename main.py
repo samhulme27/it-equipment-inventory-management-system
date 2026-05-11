@@ -52,12 +52,8 @@ def load_data():
 
 
 def save_data(df):
-    valid, message = validate_data(df)
 
-    if not valid:
-        print(f"Data validation failed: {message}")
-        return
-
+    # enforce correct column order only
     df = df.reindex(columns=[
         COL_ASSET_TAG,
         COL_DEVICE_NAME,
@@ -77,14 +73,19 @@ def save_data(df):
 
 # Function save data, validates data and takes updated python table data and writes it back into excel
 
-
 def add_new_device(device_dict):
 
-    df = load_data()
+    # FORCE asset tag FIRST (guaranteed not empty)
+    if not device_dict.get(COL_ASSET_TAG):
+        device_dict[COL_ASSET_TAG] = generate_next_asset_tag(EXL_FILE)
 
-    # ensure date is set here OR earlier in pipeline
-    if COL_DATE not in device_dict:
-        device_dict[COL_DATE] = datetime.datetime.now()
+    valid, message = validate_data(device_dict)
+
+    if not valid:
+        print(f"Validation failed: {message}")
+        return
+
+    df = load_data()
 
     new_df = pd.DataFrame([device_dict])
 
@@ -96,15 +97,20 @@ def add_new_device(device_dict):
 def manually_add_device():
 
     device_dict = {
+        COL_ASSET_TAG: generate_next_asset_tag(EXL_FILE),
         COL_DEVICE_NAME: input("Enter device name: "),
-        COL_DEVICE_TYPE: input("Enter device type: "), 
+        COL_DEVICE_TYPE: input("Enter device type: "),
         COL_SERIAL_NUMBER: input("Enter serial number: "),
         COL_MODEL_NUMBER: input("Enter model number: "),
-        COL_LOCATION: input("Enter location: "),
+        COL_MAC_ADDRESS: input("Enter MAC address: "),
         COL_USER: input("Enter user: "),
+        COL_LOCATION: input("Enter location: "),
+        COL_DATE: datetime.now().strftime("%m-%d-%Y"),
         COL_NOTES: input("Enter any notes: "),
         COL_STATUS: input("Enter status (In Use, Available, Retired, Repair): ")
     }
+
+    add_new_device(device_dict)
 
 
 def retire_device(device_name):
@@ -179,6 +185,7 @@ def search_location(location):
         return result
     
 
+
 def update_existing_device(device_dict):
     df = load_data()
 
@@ -214,6 +221,7 @@ def run():
     )
 
     valid, message = validate_data(device)
+
     if not valid:
         print(f"Device data validation failed: {message}")
         return

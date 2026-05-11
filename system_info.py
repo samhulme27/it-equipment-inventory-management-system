@@ -1,5 +1,6 @@
 import subprocess
 import pandas as pd
+import re
 
 
 COL_ASSET_TAG = "Asset Tag"
@@ -15,53 +16,43 @@ COL_NOTES = "Notes"
 COL_STATUS = "Status"
 
 
+def run_ps(command):
+    result = subprocess.run(
+        ["powershell", "-Command", command],
+        capture_output=True,
+        text=True
+    )
+    # keep only non-empty lines
+    lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    return lines[-1] if lines else ""
+
+
 def get_serial_number():
-    command = "Get-WmiObject win32_bios | select SerialNumber"
-    results = subprocess.run(["powershell", "-command", command], capture_output=True, text=True)
-    print(results.stdout)
-    return results.stdout.strip()
+    return run_ps("(Get-WmiObject Win32_BIOS).SerialNumber")
 
 
 def get_mac_address():
-    command = "Get-WmiObject win32_networkadapterconfiguration | where {$_.IPEnabled -eq $true} | select MACAddress"
-    results = subprocess.run(["powershell", "-command", command], capture_output=True, text=True)
-    print(results.stdout)
-    return results.stdout.strip()
+    return run_ps("(Get-WmiObject Win32_NetworkAdapterConfiguration | Where-Object {$_.IPEnabled -eq $true}).MACAddress")
 
 
 def get_device_name():
-    command = "Get-WmiObject win32_computersystem | select Name"
-    results = subprocess.run(["powershell", "-command", command], capture_output=True, text=True)
-    print(results.stdout)
-    return results.stdout.strip()
+    return run_ps("(Get-WmiObject Win32_ComputerSystem).Name")
 
 
 def get_device_type():
-    command = "Get-WmiObject win32_computersystem | select SystemType"
-    results = subprocess.run(["powershell", "-command", command], capture_output=True, text=True)
-    print(results.stdout)
-    return results.stdout.strip()
+    return run_ps("(Get-WmiObject Win32_ComputerSystem).SystemType")
 
 
 def get_model_number():
-    command = "Get-WmiObject win32_computersystem | select Model"
-    results = subprocess.run(["powershell", "-command", command], capture_output=True, text=True)
-    print(results.stdout)
-    return results.stdout.strip()
+    return run_ps("(Get-WmiObject Win32_ComputerSystem).Model")
 
 
 def get_user():
-    command = "Get-WmiObject win32_computersystem | select UserName"
-    results = subprocess.run(["powershell", "-command", command], capture_output=True, text=True)
-    print(results.stdout)
-    return results.stdout.strip()
+    return run_ps("(Get-WmiObject Win32_ComputerSystem).UserName")
 
 
 def get_date():
-    command = "Get-Date -Format MM-dd-yyyy"
-    results = subprocess.run(["powershell", "-command", command], capture_output=True, text=True)
-    print(results.stdout)
-    return results.stdout.strip()
+    return run_ps("Get-Date -Format MM-dd-yyyy")
 
 
 def generate_device_info(asset_tag, device_name, device_type, serial_number, model_number, mac_address, user, location, date, notes, status):
@@ -87,20 +78,31 @@ def generate_asset_tag(prefix,number):
 def generate_next_asset_tag(file_path):
 
     df = pd.read_excel(file_path)
+    df.columns = df.columns.str.strip()
+
+    if COL_ASSET_TAG not in df.columns:
+        return generate_asset_tag("ASSET", 1)
 
     tags = df[COL_ASSET_TAG].dropna().astype(str)
-    
+
     numbers = []
 
     for tag in tags:
+        tag = tag.strip()
+
+        if "-" not in tag:
+            continue
 
         parts = tag.split("-")
 
         if len(parts) != 2:
             continue
+
         if not parts[1].isdigit():
             continue
+
         numbers.append(int(parts[1]))
+
     next_number = max(numbers, default=0) + 1
 
     return generate_asset_tag("ASSET", next_number)
