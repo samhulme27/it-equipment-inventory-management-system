@@ -36,6 +36,7 @@ print("UI module loaded")
 
 def scan_device():
     serial_number = get_serial_number()
+    messagebox.showinfo("scanning", "Scanning device...")
     try:
         if device_exists(serial_number):  # Example serial number check
             messagebox.showinfo("Device Check", "Device already exists in inventory, data has been updated.")
@@ -180,7 +181,8 @@ def view_inventory():
                     df.at[idx[0], col] = entries[col].get()
 
                 save_data(df)
-
+            
+            messagebox.showinfo("Success", "Device updated successfully.")
             edit_window.destroy()
             load_table(df)
 
@@ -213,6 +215,7 @@ def view_inventory():
         updated_df = df[df[key_col] != key_value]
 
         save_data(updated_df)
+        messagebox.showinfo("Deleted", "Device deleted successfully.")
         load_table(updated_df)
 
     # ----------------------------
@@ -313,6 +316,7 @@ def open_manually_add_device_window():
         }
 
         add_new_device(device_dict)
+        messagebox.showinfo("Success", "Device added successfully.")
         add_window.destroy()
 
     tk.Button(add_window, text="Add Device", command=submit_device).pack(pady=10)
