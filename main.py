@@ -54,7 +54,8 @@ def load_data():
 
 def save_data(df):
 
-    data_backup(EXL_FILE) # backup data before saving, creates a backup folder and saves the old file with a timestamp, prevents data loss from accidental overwrites
+    if os.path.exists(EXL_FILE):
+        data_backup(EXL_FILE) # backup data before saving, creates a backup folder and saves the old file with a timestamp, prevents data loss from accidental overwrites, last state before action is saved 
 
     # enforce correct column order only
     df = df.reindex(columns=[
@@ -189,8 +190,10 @@ def search_location(location):
     
 
 def data_backup(file_path):
+
     if not os.path.exists(file_path):
         return
+    
     back_up_folder = "backups"
     os.makedirs(back_up_folder, exist_ok=True)
 
@@ -199,6 +202,18 @@ def data_backup(file_path):
     back_up_file = os.path.join(back_up_folder, f"inventory_backup_{timestamp}.xlsx")
 
     shutil.copy(file_path, back_up_file)
+
+    #keep 10 most recent backups, delete older ones
+    backups = sorted([
+        os.path.join(back_up_folder, f)
+        for f in os.listdir(back_up_folder)
+        if f.endswith(".xlsx")
+    ], key=os.path.getmtime
+    )
+
+    while len(backups) > 10:
+        os.remove(backups[0])
+        backups.pop(0)
 
 
 def update_existing_device(device_dict):

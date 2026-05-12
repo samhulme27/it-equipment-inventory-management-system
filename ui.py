@@ -319,40 +319,55 @@ def view_inventory():
         selected = tree.selection()
 
         if not selected:
-
             messagebox.showwarning(
                 "Delete",
-                "Select a device first.", parent=inventory_window
+                "Please select a device first.",
+                parent=inventory_window
             )
-
             return
 
         item = tree.item(selected[0])
         values = item["values"]
 
+        # use Asset Tag as safe key
+        asset_index = list(df.columns).index(COL_ASSET_TAG)
+        asset_value = values[asset_index]
+
         confirm = messagebox.askyesno(
             "Confirm Delete",
-            "Are you sure you want to delete this device?", parent=inventory_window
+            "Are you sure you want to delete this device?",
+            parent=inventory_window
         )
 
         if not confirm:
             return
 
-        key_col = df.columns[0]
-        key_value = values[0]
+       # reload latest data directly from excel
+        updated_df = load_data()
 
-        updated_df = df[
-            df[key_col] != key_value
+        # clean columns
+        updated_df.columns = updated_df.columns.str.strip()
+
+        # remove selected device using Asset Tag
+        updated_df = updated_df[
+            updated_df[COL_ASSET_TAG]
+            .astype(str)
+            .str.strip()
+            !=
+            str(asset_value).strip()
         ]
 
+        # IMPORTANT
+        # reset indexes after delete
+        updated_df = updated_df.reset_index(drop=True)
+
+        # save updated dataframe
         save_data(updated_df)
 
-        messagebox.showinfo(
-            "Deleted",
-            "Device deleted successfully.", parent=inventory_window
-        )
-
+        # refresh table
         load_table(updated_df)
+
+
 
     # ----------------------------
     # TAKE OUT DEVICE
@@ -372,11 +387,8 @@ def view_inventory():
         item = tree.item(selected[0])
         values = item["values"]
 
-        # ----------------------------
-        # SAFE KEY (Serial Number)
-        # ----------------------------
-        serial_index = list(df.columns).index(COL_SERIAL_NUMBER)
-        serial_value = values[serial_index]
+        asset_index = list(df.columns).index(COL_ASSET_TAG)
+        asset_value = values[asset_index]
 
         # ----------------------------
         # POPUP WINDOW (MODAL)
@@ -434,8 +446,8 @@ def view_inventory():
             df[COL_NOTES] = df[COL_NOTES].astype("string").fillna("")
             df[COL_LOCATION] = df[COL_LOCATION].astype("string").fillna("")
 
-            # find correct row using serial number
-            idx = df.index[df[COL_SERIAL_NUMBER] == serial_value]
+            # find correct row using asset tag
+            idx = df.index[df[COL_ASSET_TAG] == asset_value]
 
             if len(idx) == 0:
                 messagebox.showerror(
