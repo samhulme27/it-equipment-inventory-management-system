@@ -108,7 +108,7 @@ def manually_add_device():
         COL_MAC_ADDRESS: input("Enter MAC address: "),
         COL_USER: input("Enter user: "),
         COL_LOCATION: input("Enter location: "),
-        COL_DATE: datetime.now().strftime("%m-%d-%Y"),
+        COL_DATE: datetime.now(),
         COL_NOTES: input("Enter any notes: "),
         COL_STATUS: input("Enter status (In Use, Available, Retired, Repair): ")
     }

@@ -47,6 +47,7 @@ def scan_device():
         messagebox.showerror("Error", str(e))
 
 
+
 def view_inventory():
 
     inventory_window = tk.Toplevel(root)
@@ -56,6 +57,47 @@ def view_inventory():
 
     frame = tk.Frame(inventory_window, bg="#f5f5f5")
     frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+
+    def load_table(dataframe):
+
+        tree.delete(*tree.get_children())
+
+        if dataframe.empty:
+            return
+
+        dataframe.columns = dataframe.columns.str.strip()
+
+        dataframe[COL_DATE] = pd.to_datetime(
+            dataframe[COL_DATE],
+            errors="coerce"
+        )
+
+        dataframe = dataframe.sort_values(
+            by=COL_DATE,
+            ascending=False
+        ).reset_index(drop=True)
+
+        for _, row in dataframe.iterrows():
+
+            display_values = []
+
+            for value in row:
+
+                if pd.isna(value):
+                    value = ""
+
+                elif isinstance(value, pd.Timestamp):
+                    value = value.strftime("%m-%d-%Y")
+
+                display_values.append(str(value))
+
+            tree.insert(
+                "",
+                "end",
+                values=display_values
+            )
+
 
     # ----------------------------
     # SEARCH BAR
@@ -72,31 +114,73 @@ def view_inventory():
     scrollbar = tk.Scrollbar(frame)
     scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-    tree = ttk.Treeview(frame, yscrollcommand=scrollbar.set, selectmode="browse")
+    tree = ttk.Treeview(
+        frame,
+        yscrollcommand=scrollbar.set,
+        selectmode="browse"
+    )
+
     scrollbar.config(command=tree.yview)
 
+    # ----------------------------
+    # LOAD DATA
+    # ----------------------------
     df = load_data()
 
     if df.empty:
-        messagebox.showinfo("Inventory", "No devices found")
+        messagebox.showinfo(
+            "Inventory",
+            "No devices found"
+        )
+        inventory_window.destroy()
         return
 
     df.columns = df.columns.str.strip()
 
+    # ----------------------------
+    # SORT BY MOST RECENT
+    # ----------------------------
+    df[COL_DATE] = pd.to_datetime(
+        df[COL_DATE],
+        errors="coerce"
+    )
+
+    df = df.sort_values(
+        by=COL_DATE,
+        ascending=False
+    ).reset_index(drop=True)
+
     tree["columns"] = list(df.columns)
+
     tree.column("#0", width=0, stretch=False)
 
     for col in df.columns:
-        tree.column(col, anchor="w", width=170, stretch=True)
-        tree.heading(col, text=col, anchor="w")
+        tree.column(
+            col,
+            anchor="w",
+            width=170,
+            stretch=True
+        )
+
+        tree.heading(
+            col,
+            text=col,
+            anchor="w"
+        )
 
     # ----------------------------
     # LOAD TABLE
     # ----------------------------
     def load_table(dataframe):
+
         tree.delete(*tree.get_children())
+
         for _, row in dataframe.iterrows():
-            tree.insert("", "end", values=list(row))
+            tree.insert(
+                "",
+                "end",
+                values=list(row)
+            )
 
     load_table(df)
 
@@ -104,6 +188,7 @@ def view_inventory():
     # SEARCH
     # ----------------------------
     def update_search(*args):
+
         query = search_var.get().lower().strip()
 
         if not query or query == "search devices...":
@@ -111,7 +196,11 @@ def view_inventory():
             return
 
         filtered = df[df.apply(
-            lambda row: row.astype(str).str.lower().str.contains(query).any(),
+            lambda row:
+            row.astype(str)
+            .str.lower()
+            .str.contains(query)
+            .any(),
             axis=1
         )]
 
@@ -120,11 +209,12 @@ def view_inventory():
     search_var.trace_add("write", update_search)
 
     # ----------------------------
-    # VIEW SELECTED
+    # VIEW DEVICE
     # ----------------------------
     def view_selected():
 
         selected = tree.selection()
+
         if not selected:
             return
 
@@ -133,21 +223,28 @@ def view_inventory():
 
         view_window = tk.Toplevel(inventory_window)
         view_window.title("Device Details")
-        view_window.geometry("400x400")
+        view_window.geometry("500x500")
 
         for i, col in enumerate(df.columns):
+
             tk.Label(
                 view_window,
                 text=f"{col}: {values[i]}",
-                anchor="w"
-            ).pack(fill="x", padx=10, pady=2)
+                anchor="w",
+                justify="left"
+            ).pack(
+                fill="x",
+                padx=10,
+                pady=3
+            )
 
     # ----------------------------
-    # EDIT SELECTED
+    # EDIT DEVICE
     # ----------------------------
     def edit_selected():
 
         selected = tree.selection()
+
         if not selected:
             return
 
@@ -156,16 +253,26 @@ def view_inventory():
 
         edit_window = tk.Toplevel(inventory_window)
         edit_window.title("Edit Device")
-        edit_window.geometry("400x500")
+        edit_window.geometry("400x600")
 
         entries = {}
 
         for i, col in enumerate(df.columns):
-            tk.Label(edit_window, text=col).pack()
+
+            tk.Label(
+                edit_window,
+                text=col
+            ).pack()
 
             entry = tk.Entry(edit_window)
+
             entry.insert(0, values[i])
-            entry.pack()
+
+            entry.pack(
+                fill="x",
+                padx=10,
+                pady=3
+            )
 
             entries[col] = entry
 
@@ -174,28 +281,50 @@ def view_inventory():
             key_col = df.columns[0]
             key_value = values[0]
 
-            idx = df.index[df[key_col] == key_value]
+            idx = df.index[
+                df[key_col] == key_value
+            ]
 
             if len(idx) > 0:
+
                 for col in df.columns:
-                    df.at[idx[0], col] = entries[col].get()
+
+                    df.at[
+                        idx[0],
+                        col
+                    ] = entries[col].get()
 
                 save_data(df)
-            
-            messagebox.showinfo("Success", "Device updated successfully.")
+
+                messagebox.showinfo(
+                    "Saved",
+                    "Device updated successfully.", parent=inventory_window
+                )
+
             edit_window.destroy()
+
             load_table(df)
 
-        tk.Button(edit_window, text="Save", command=save_changes).pack(pady=10)
+        tk.Button(
+            edit_window,
+            text="Save",
+            command=save_changes
+        ).pack(pady=10)
 
     # ----------------------------
-    # DELETE SELECTED
+    # DELETE DEVICE
     # ----------------------------
     def delete_selected():
 
         selected = tree.selection()
+
         if not selected:
-            messagebox.showwarning("Delete", "Select a device first.")
+
+            messagebox.showwarning(
+                "Delete",
+                "Select a device first.", parent=inventory_window
+            )
+
             return
 
         item = tree.item(selected[0])
@@ -203,7 +332,7 @@ def view_inventory():
 
         confirm = messagebox.askyesno(
             "Confirm Delete",
-            "Are you sure you want to delete this device?"
+            "Are you sure you want to delete this device?", parent=inventory_window
         )
 
         if not confirm:
@@ -212,24 +341,179 @@ def view_inventory():
         key_col = df.columns[0]
         key_value = values[0]
 
-        updated_df = df[df[key_col] != key_value]
+        updated_df = df[
+            df[key_col] != key_value
+        ]
 
         save_data(updated_df)
-        messagebox.showinfo("Deleted", "Device deleted successfully.")
+
+        messagebox.showinfo(
+            "Deleted",
+            "Device deleted successfully.", parent=inventory_window
+        )
+
         load_table(updated_df)
+
+    # ----------------------------
+    # TAKE OUT DEVICE
+    # ----------------------------
+    def take_out_device():
+
+        selected = tree.selection()
+
+        if not selected:
+            messagebox.showwarning(
+                "Take Out",
+                "Please select a device first.",
+                parent=inventory_window
+            )
+            return
+
+        item = tree.item(selected[0])
+        values = item["values"]
+
+        # ----------------------------
+        # SAFE KEY (Serial Number)
+        # ----------------------------
+        serial_index = list(df.columns).index(COL_SERIAL_NUMBER)
+        serial_value = values[serial_index]
+
+        # ----------------------------
+        # POPUP WINDOW (MODAL)
+        # ----------------------------
+        takeout_window = tk.Toplevel(inventory_window)
+        takeout_window.title("Check Out Device")
+        takeout_window.geometry("350x250")
+
+        takeout_window.transient(inventory_window)
+        takeout_window.grab_set()
+
+        # ----------------------------
+        # USER INPUT
+        # ----------------------------
+        tk.Label(takeout_window, text="User *").pack(pady=5)
+        user_entry = tk.Entry(takeout_window)
+        user_entry.pack(fill="x", padx=10)
+
+        tk.Label(takeout_window, text="Notes").pack(pady=5)
+        notes_entry = tk.Entry(takeout_window)
+        notes_entry.pack(fill="x", padx=10)
+
+        tk.Label(takeout_window, text="Location").pack(pady=5)
+        location_entry = tk.Entry(takeout_window)
+        location_entry.pack(fill="x", padx=10)
+
+        # ----------------------------
+        # CONFIRM
+        # ----------------------------
+        def confirm_takeout():
+
+            user = user_entry.get().strip()
+            notes = notes_entry.get().strip()
+            location = location_entry.get().strip()
+
+            # validation
+            if not user:
+                messagebox.showerror(
+                    "Missing Data",
+                    "User is required.",
+                    parent=takeout_window
+                )
+                return
+            elif not location:
+                messagebox.showerror(
+                    "Missing Data",
+                    "Location is required.",
+                    parent=takeout_window
+                )
+                return
+
+            # ensure safe types (prevents float64 crash)
+            df[COL_USER] = df[COL_USER].astype("string").fillna("")
+            df[COL_STATUS] = df[COL_STATUS].astype("string").fillna("")
+            df[COL_NOTES] = df[COL_NOTES].astype("string").fillna("")
+            df[COL_LOCATION] = df[COL_LOCATION].astype("string").fillna("")
+
+            # find correct row using serial number
+            idx = df.index[df[COL_SERIAL_NUMBER] == serial_value]
+
+            if len(idx) == 0:
+                messagebox.showerror(
+                    "Error",
+                    "Device not found.",
+                    parent=takeout_window
+                )
+                return
+
+            # update record
+            df.at[idx[0], COL_STATUS] = "Checked Out"
+            df.at[idx[0], COL_USER] = str(user)
+            df.at[idx[0], COL_NOTES] = str(notes)
+            df.at[idx[0], COL_LOCATION] = str(location)
+            df.at[idx[0], COL_DATE] = datetime.now()
+
+            save_data(df)
+
+            load_table(df)
+
+            messagebox.showinfo(
+                "Success",
+                "Device checked out successfully.",
+                parent=inventory_window
+            )
+
+            takeout_window.destroy()
+
+        # ----------------------------
+        # BUTTON
+        # ----------------------------
+        tk.Button(
+            takeout_window,
+            text="Confirm Checkout",
+            command=confirm_takeout
+        ).pack(pady=15)
 
     # ----------------------------
     # RIGHT CLICK MENU
     # ----------------------------
-    menu = tk.Menu(inventory_window, tearoff=0)
-    menu.add_command(label="View", command=view_selected)
-    menu.add_command(label="Edit", command=edit_selected)
-    menu.add_command(label="Delete", command=delete_selected)
+    menu = tk.Menu(
+        inventory_window,
+        tearoff=0
+    )
+
+    menu.add_command(
+        label="View",
+        command=view_selected
+    )
+
+    menu.add_command(
+        label="Edit",
+        command=edit_selected
+    )
+
+    menu.add_command(
+        label="Take Out Device",
+        command=take_out_device
+    )
+
+    menu.add_command(
+        label="Delete",
+        command=delete_selected
+    )
 
     def show_menu(event):
+
         try:
-            tree.selection_set(tree.identify_row(event.y))
-            menu.post(event.x_root, event.y_root)
+
+            tree.selection_set(
+                tree.identify_row(event.y)
+            )
+
+            menu.post(
+                event.x_root,
+                event.y_root
+            )
+
         finally:
             menu.grab_release()
 
@@ -238,8 +522,10 @@ def view_inventory():
     # ----------------------------
     # PACK TREE
     # ----------------------------
-    tree.pack(fill="both", expand=True)
-
+    tree.pack(
+        fill="both",
+        expand=True
+    )
 
 
 def open_manually_add_device_window():
@@ -310,13 +596,13 @@ def open_manually_add_device_window():
             COL_MAC_ADDRESS: entry_mac_address.get(),
             COL_USER: entry_user.get(),
             COL_LOCATION: entry_location.get(),
-            COL_DATE: datetime.now().strftime("%m-%d-%Y"),
+            COL_DATE: datetime.now(),
             COL_NOTES: entry_notes.get(),
             COL_STATUS: entry_status.get()
         }
 
         add_new_device(device_dict)
-        messagebox.showinfo("Success", "Device added successfully.")
+        messagebox.showinfo("Success", "Device added successfully.", parent=add_window)
         add_window.destroy()
 
     tk.Button(add_window, text="Add Device", command=submit_device).pack(pady=10)
