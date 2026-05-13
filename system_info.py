@@ -4,7 +4,7 @@ import re
 
 
 COL_ASSET_TAG = "Asset Tag"
-COL_DEVICE_NAME = "Device Name"
+COL_ASSET_NAME = "Asset Name"
 COL_DEVICE_TYPE = "Device Type"
 COL_SERIAL_NUMBER = "Serial Number"
 COL_MODEL_NUMBER = "Model Number"
@@ -35,7 +35,7 @@ def get_mac_address():
     return run_ps("(Get-WmiObject Win32_NetworkAdapterConfiguration | Where-Object {$_.IPEnabled -eq $true}).MACAddress")
 
 
-def get_device_name():
+def get_asset_name():
     return run_ps("(Get-WmiObject Win32_ComputerSystem).Name")
 
 
@@ -55,10 +55,10 @@ def get_date():
     return run_ps("Get-Date -Format MM-dd-yyyy")
 
 
-def generate_device_info(asset_tag, device_name, device_type, serial_number, model_number, mac_address, user, location, date, notes, status):
+def generate_device_info(asset_tag, asset_name, device_type, serial_number, model_number, mac_address, user, location, date, notes, status):
     return {
         COL_ASSET_TAG: asset_tag,
-        COL_DEVICE_NAME: device_name,
+        COL_ASSET_NAME: asset_name,
         COL_DEVICE_TYPE: device_type,
         COL_SERIAL_NUMBER: serial_number,
         COL_MODEL_NUMBER: model_number,

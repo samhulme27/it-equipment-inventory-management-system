@@ -3,12 +3,12 @@ from tkinter import messagebox, ttk
 import pandas as pd
 from datetime import datetime
 
-from main import add_new_device, run, load_data, device_exists, manually_add_device, save_data
+from main import add_new_device, run, load_data, device_exists, save_data
 from system_info import get_serial_number
 
 
 COL_ASSET_TAG = "Asset Tag"
-COL_DEVICE_NAME = "Device Name"
+COL_ASSET_NAME = "Asset Name"
 COL_DEVICE_TYPE = "Device Type"
 COL_SERIAL_NUMBER = "Serial Number"
 COL_MODEL_NUMBER = "Model Number"
@@ -26,7 +26,7 @@ COL_STATUS = "Status"
 
 root = tk.Tk()
 root.title("IT Asset Manager")
-root.geometry("1600x1200")
+root.geometry("1200x800")
 
 print("UI module loaded")
 
@@ -52,7 +52,7 @@ def view_inventory():
 
     inventory_window = tk.Toplevel(root)
     inventory_window.title("Inventory")
-    inventory_window.geometry("1600x800")
+    inventory_window.geometry("1200x800")
     inventory_window.configure(bg="#f5f5f5")
 
     frame = tk.Frame(inventory_window, bg="#f5f5f5")
@@ -223,7 +223,7 @@ def view_inventory():
 
         view_window = tk.Toplevel(inventory_window)
         view_window.title("Device Details")
-        view_window.geometry("500x500")
+        view_window.geometry("600x400")
 
         for i, col in enumerate(df.columns):
 
@@ -253,7 +253,7 @@ def view_inventory():
 
         edit_window = tk.Toplevel(inventory_window)
         edit_window.title("Edit Device")
-        edit_window.geometry("400x600")
+        edit_window.geometry("600x400")
 
         entries = {}
 
@@ -367,124 +367,6 @@ def view_inventory():
         # refresh table
         load_table(updated_df)
 
-
-
-    # ----------------------------
-    # TAKE OUT DEVICE
-    # ----------------------------
-    def take_out_device():
-
-        selected = tree.selection()
-
-        if not selected:
-            messagebox.showwarning(
-                "Take Out",
-                "Please select a device first.",
-                parent=inventory_window
-            )
-            return
-
-        item = tree.item(selected[0])
-        values = item["values"]
-
-        asset_index = list(df.columns).index(COL_ASSET_TAG)
-        asset_value = values[asset_index]
-
-        # ----------------------------
-        # POPUP WINDOW (MODAL)
-        # ----------------------------
-        takeout_window = tk.Toplevel(inventory_window)
-        takeout_window.title("Check Out Device")
-        takeout_window.geometry("350x250")
-
-        takeout_window.transient(inventory_window)
-        takeout_window.grab_set()
-
-        # ----------------------------
-        # USER INPUT
-        # ----------------------------
-        tk.Label(takeout_window, text="User *").pack(pady=5)
-        user_entry = tk.Entry(takeout_window)
-        user_entry.pack(fill="x", padx=10)
-
-        tk.Label(takeout_window, text="Notes").pack(pady=5)
-        notes_entry = tk.Entry(takeout_window)
-        notes_entry.pack(fill="x", padx=10)
-
-        tk.Label(takeout_window, text="Location").pack(pady=5)
-        location_entry = tk.Entry(takeout_window)
-        location_entry.pack(fill="x", padx=10)
-
-        # ----------------------------
-        # CONFIRM
-        # ----------------------------
-        def confirm_takeout():
-
-            user = user_entry.get().strip()
-            notes = notes_entry.get().strip()
-            location = location_entry.get().strip()
-
-            # validation
-            if not user:
-                messagebox.showerror(
-                    "Missing Data",
-                    "User is required.",
-                    parent=takeout_window
-                )
-                return
-            elif not location:
-                messagebox.showerror(
-                    "Missing Data",
-                    "Location is required.",
-                    parent=takeout_window
-                )
-                return
-
-            # ensure safe types (prevents float64 crash)
-            df[COL_USER] = df[COL_USER].astype("string").fillna("")
-            df[COL_STATUS] = df[COL_STATUS].astype("string").fillna("")
-            df[COL_NOTES] = df[COL_NOTES].astype("string").fillna("")
-            df[COL_LOCATION] = df[COL_LOCATION].astype("string").fillna("")
-
-            # find correct row using asset tag
-            idx = df.index[df[COL_ASSET_TAG] == asset_value]
-
-            if len(idx) == 0:
-                messagebox.showerror(
-                    "Error",
-                    "Device not found.",
-                    parent=takeout_window
-                )
-                return
-
-            # update record
-            df.at[idx[0], COL_STATUS] = "Checked Out"
-            df.at[idx[0], COL_USER] = str(user)
-            df.at[idx[0], COL_NOTES] = str(notes)
-            df.at[idx[0], COL_LOCATION] = str(location)
-            df.at[idx[0], COL_DATE] = datetime.now()
-
-            save_data(df)
-
-            load_table(df)
-
-            messagebox.showinfo(
-                "Success",
-                "Device checked out successfully.",
-                parent=inventory_window
-            )
-
-            takeout_window.destroy()
-
-        # ----------------------------
-        # BUTTON
-        # ----------------------------
-        tk.Button(
-            takeout_window,
-            text="Confirm Checkout",
-            command=confirm_takeout
-        ).pack(pady=15)
-
     # ----------------------------
     # RIGHT CLICK MENU
     # ----------------------------
@@ -503,10 +385,6 @@ def view_inventory():
         command=edit_selected
     )
 
-    menu.add_command(
-        label="Take Out Device",
-        command=take_out_device
-    )
 
     menu.add_command(
         label="Delete",
@@ -543,13 +421,13 @@ def view_inventory():
 def open_manually_add_device_window():
     add_window = tk.Toplevel(root)
     add_window.title("Manually Add Device")
-    add_window.geometry("1000x800")
+    add_window.geometry("1200x800")
 
-    # Device Name
-    label_device_name = tk.Label(add_window, text="Device Name:")
-    label_device_name.pack()
-    entry_device_name = tk.Entry(add_window)
-    entry_device_name.pack()
+    # Asset Name
+    label_asset_name = tk.Label(add_window, text="Asset Name:")
+    label_asset_name.pack()
+    entry_asset_name = tk.Entry(add_window)
+    entry_asset_name.pack()
 
     # Serial Number
     label_serial_number = tk.Label(add_window, text="Serial Number:")
@@ -601,7 +479,7 @@ def open_manually_add_device_window():
 
     def submit_device():
         device_dict = {
-            COL_DEVICE_NAME: entry_device_name.get(),
+            COL_ASSET_NAME: entry_asset_name.get(),
             COL_SERIAL_NUMBER: entry_serial_number.get(),
             COL_DEVICE_TYPE: entry_device_type.get(),
             COL_MODEL_NUMBER: entry_model_number.get(),

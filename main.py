@@ -1,13 +1,13 @@
 import pandas as pd 
-import shutil, os
+import os
+import shutil
 from datetime import datetime
-from system_info import get_serial_number, get_mac_address, get_device_name, get_device_type, get_model_number, get_user, generate_device_info, get_date, generate_next_asset_tag, generate_asset_tag
+from system_info import get_serial_number, get_mac_address, get_asset_name, get_device_type, get_model_number, get_user, generate_device_info, get_date, generate_next_asset_tag, generate_asset_tag
+from config import EXL_FILE, BASE_DIR
 
-# excel fileS
-EXL_FILE = "inventory.xlsx"
 
 COL_ASSET_TAG = "Asset Tag"
-COL_DEVICE_NAME = "Device Name"
+COL_ASSET_NAME = "Asset Name"
 COL_DEVICE_TYPE = "Device Type"
 COL_SERIAL_NUMBER = "Serial Number"
 COL_MODEL_NUMBER = "Model Number"
@@ -60,7 +60,7 @@ def save_data(df):
     # enforce correct column order only
     df = df.reindex(columns=[
         COL_ASSET_TAG,
-        COL_DEVICE_NAME,
+        COL_ASSET_NAME,
         COL_DEVICE_TYPE,
         COL_SERIAL_NUMBER,
         COL_MODEL_NUMBER,
@@ -73,7 +73,7 @@ def save_data(df):
     ])
 
     df.to_excel(EXL_FILE, index=False)
-    print("Data saved successfully.")
+    data_backup(EXL_FILE) # backup data after saving, creates a backup folder and saves the new file with a timestamp, allows for recovery of previous state if needed
 
 # Function save data, validates data and takes updated python table data and writes it back into excel
 
@@ -102,7 +102,7 @@ def manually_add_device():
 
     device_dict = {
         COL_ASSET_TAG: generate_next_asset_tag(EXL_FILE),
-        COL_DEVICE_NAME: input("Enter device name: "),
+        COL_ASSET_NAME: input("Enter asset name: "),
         COL_DEVICE_TYPE: input("Enter device type: "),
         COL_SERIAL_NUMBER: input("Enter serial number: "),
         COL_MODEL_NUMBER: input("Enter model number: "),
@@ -117,10 +117,10 @@ def manually_add_device():
     add_new_device(device_dict)
 
 
-def retire_device(device_name):
+def retire_device(asset_name):
     df = load_data()
 
-    df[df[COL_DEVICE_NAME] != device_name]
+    df = df[df[COL_ASSET_NAME] != asset_name]
 
     save_data(df)
 
@@ -141,12 +141,12 @@ def edit_device(serial_number, column, new_value):
     save_data() 
 
 
-#search function, takes the device name and searches through the excel file for it, then prints the row with the device name, if not found prints no devices found
+#search function, takes the asset name and searches through the excel file for it, then prints the row with the asset name, if not found prints no devices found
 
-def search_device_name(device_name):
+def search_asset_name(asset_name):
     df = load_data()
 
-    result = df[df[COL_DEVICE_NAME].astype(str).str.contains(device_name, case=False, na=False)]
+    result = df[df[COL_ASSET_NAME].astype(str).str.contains(asset_name, case=False, na=False)]
     if result.empty:
         print("No devices found with that name.")
     else:
@@ -194,7 +194,7 @@ def data_backup(file_path):
     if not os.path.exists(file_path):
         return
     
-    back_up_folder = "backups"
+    back_up_folder = os.path.join(BASE_DIR, "backups")
     os.makedirs(back_up_folder, exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -224,7 +224,7 @@ def update_existing_device(device_dict):
     mask = df[COL_SERIAL_NUMBER].astype(str) == serial
 
     auto_updated_fields = [
-        COL_DEVICE_NAME, 
+        COL_ASSET_NAME, 
         COL_DEVICE_TYPE, 
         COL_MODEL_NUMBER, 
         COL_MAC_ADDRESS,
@@ -238,7 +238,7 @@ def update_existing_device(device_dict):
 def run():
     device = generate_device_info(
         asset_tag=generate_next_asset_tag(EXL_FILE),
-        device_name=get_device_name(),
+        asset_name=get_asset_name(),
         device_type=get_device_type(),
         serial_number=get_serial_number(),
         model_number=get_model_number(),
